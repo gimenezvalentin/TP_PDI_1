@@ -11,23 +11,14 @@ plt.figure(), plt.imshow(img, cmap='gray'), plt.title("Imagen Original"), plt.sh
 img_zeros = img < 2
 plt.figure(), plt.imshow(img_zeros, cmap='gray'), plt.title("Imagen Booleana"), plt.show(block=False)
 
-# Crear borde alrededor (FALTA) - BORRAR
-# // TODO: todavia no se para que sirve
-top = int(0.05 * img.shape[0])  # shape[0] = rows
-bottom = top
-left = int(0.05 * img.shape[1])  # shape[1] = cols
-right = left
-value = [randint(0, 255), randint(0, 255), randint(0, 255)]
-img_borde = cv2.copyMakeBorder(img,top,bottom,left,right,borderType=cv2.BORDER_CONSTANT,value=value)
-plt.figure(), plt.imshow(img_borde, cmap='gray'), plt.title("Imagen Borde"), plt.show(block=False)
 
 # ANALIZANDO POR QUÉ NO FUNCIONA LA ECUALIZACION TOTAL DE LA IMAGEN
 hist = cv2.calcHist([img], [0], None, [256], [0, 256])
 plt.figure(), plt.hist(img.flatten(), 256, [0, 256]), plt.title("Histograma"), plt.show(block=False)
+
 ecua = cv2.equalizeHist(img)
 plt.figure(), plt.imshow(ecua, cmap='gray'), plt.title("Imagen Ecualizada Total"), plt.show(block=False)
 plt.figure(), plt.hist(ecua.flatten(), 256, [0, 256]), plt.title("Ecualizacion"), plt.show(block=False)
-
 
 def ecualizacion_local_histograma(imagen ,MxN: tuple, border=cv2.BORDER_REPLICATE)-> None:
     '''
@@ -68,7 +59,7 @@ ventana3x3 = ecualizacion_local_histograma(img, (3,3))
 ventana5x5 = ecualizacion_local_histograma(img, (5,5))
 ventana15x15 = ecualizacion_local_histograma(img, (15,15))
 ventana30x30 = ecualizacion_local_histograma(img, (30,30))
-#prueba.shape
+
 plt.figure()
 plt.subplot(221), plt.imshow(ventana3x3, cmap='gray'), plt.title("Imagen Ecualizada 3x3")
 plt.subplot(222), plt.imshow(ventana5x5, cmap='gray'), plt.title("Imagen Ecualizada 5x5")
