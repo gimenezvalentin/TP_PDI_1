@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from random import randint
 import matplotlib.pyplot as plt
 
 # Cargar y mostrar imagen
@@ -40,16 +39,19 @@ def ecualizacion_local_histograma(imagen ,MxN: tuple, border=cv2.BORDER_REPLICAT
     left = N // 2
     right = left
     
-    imagen_borde = cv2.copyMakeBorder(img,top,bottom,left,right,borderType=border)
+    imagen_borde = cv2.copyMakeBorder(imagen,top,bottom,left,right,borderType=border)
+
+    # Copia de la imagen orignial
+    imagen_ecualizada = imagen.copy()
 
     # Empezamos a recorrer la imagen
-    imagen_ecualizada = imagen_borde.copy()
     for i in range(imagen.shape[0]):
         for j in range(imagen.shape[1]):
-        # Ventana MxN centrada en el píxel (i, j) original
+            # Ventana MxN centrada en el píxel (i, j) original
             ventana = imagen_borde[i : i + M, j : j + N]
             ventana_eq = cv2.equalizeHist(ventana)
-            imagen_ecualizada[i : i + M, j : j + N] = ventana_eq
+            # Solo se guarda el píxel central de la ventana ecualizada
+            imagen_ecualizada[i,j] = ventana_eq[M // 2,N // 2]
     
     return imagen_ecualizada
    
@@ -70,9 +72,10 @@ plt.show(block=False)
 print(img.shape)
 
 '''
-1. el borde con el replicate esta bien?
-2. la imagen quedo mas grande que la original
-3. el kernel toma el valor del borde creado, esta bien?
+1. el borde con el replicate esta bien? - RESUELTO, ES LO MISMO
+2. la imagen quedo mas grande que la original - RESUELTO
+3. el kernel toma el valor del borde creado, esta bien? - RESUELTO, AHORA SOLO TOMA EL VALOR DEL 
+PIXEL CENTRAL ECUALIZADO
 
 '''
 
