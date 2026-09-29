@@ -2,24 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Cargar y mostrar imagen
-img = cv2.imread("Imagen_con_detalles_escondidos.tif",cv2.IMREAD_GRAYSCALE)
-plt.figure(), plt.imshow(img, cmap='gray'), plt.title("Imagen Original"), plt.show(block=False)
-
-# Imagen booleana para ver los resultados ocultos
-img_zeros = img < 2
-plt.figure(), plt.imshow(img_zeros, cmap='gray'), plt.title("Imagen Booleana"), plt.show(block=False)
-
-
-# ANALIZANDO POR QUÉ NO FUNCIONA LA ECUALIZACION TOTAL DE LA IMAGEN
-hist = cv2.calcHist([img], [0], None, [256], [0, 256])
-plt.figure(), plt.hist(img.flatten(), 256, [0, 256]), plt.title("Histograma"), plt.show(block=False)
-
-ecua = cv2.equalizeHist(img)
-plt.figure(), plt.imshow(ecua, cmap='gray'), plt.title("Imagen Ecualizada Total"), plt.show(block=False)
-plt.figure(), plt.hist(ecua.flatten(), 256, [0, 256]), plt.title("Ecualizacion"), plt.show(block=False)
-
-def ecualizacion_local_histograma(imagen ,MxN: tuple, border=cv2.BORDER_REPLICATE)-> None:
+def ecualizacion_local_histograma(imagen:np.ndarray,MxN: tuple,border = cv2.BORDER_REPLICATE)-> np.ndarray:
     '''
     Recibe una imagen a procesar y un tamaño de ventana de procesamiento.
 
@@ -33,106 +16,69 @@ def ecualizacion_local_histograma(imagen ,MxN: tuple, border=cv2.BORDER_REPLICAT
         return print("La ventana de procesamiento es mas grande que la imagen")
     
     M,N = MxN
-    # Creamos margenes en los costados de la imagen que es la mitad de la ventana de procesamiento MxN
-    top = M // 2
-    bottom = top
-    left = N // 2
-    right = left
     
-    imagen_borde = cv2.copyMakeBorder(imagen,top,bottom,left,right,borderType=border)
-
-    # Copia de la imagen orignial
-    imagen_ecualizada = imagen.copy()
-
-    # Empezamos a recorrer la imagen
+    #impares para centro unico
+    if M % 2 == 0 or N % 2 == 0:
+        return print("El tamaño de la ventana (MxN) debe estar compuesto por números impares.")
+    # Creamos margenes en los costados de la imagen que es la mitad de la ventana de procesamiento MxN
+    top = bottom = M // 2
+    left = right = N // 2
+    
+    imagen_borde = cv2.copyMakeBorder(imagen,top,bottom,left,right,borderType=border) 
+    imagen_ecualizada = np.zeros(imagen.shape)
     for i in range(imagen.shape[0]):
         for j in range(imagen.shape[1]):
             # Ventana MxN centrada en el píxel (i, j) original
             ventana = imagen_borde[i : i + M, j : j + N]
             ventana_eq = cv2.equalizeHist(ventana)
-            # Solo se guarda el píxel central de la ventana ecualizada
-            imagen_ecualizada[i,j] = ventana_eq[M // 2,N // 2]
+            imagen_ecualizada[i, j] = ventana_eq[M // 2, N //2]
     
     return imagen_ecualizada
-   
-# Probamos con distintos tipos de ventana
 
-ventana3x3 = ecualizacion_local_histograma(img, (3,3))
-ventana5x5 = ecualizacion_local_histograma(img, (5,5))
-ventana15x15 = ecualizacion_local_histograma(img, (15,15))
-ventana30x30 = ecualizacion_local_histograma(img, (30,30))
+#----------Ejecucion-----------------------------------------------------------------------------------------
 
-plt.figure()
-plt.subplot(221), plt.imshow(ventana3x3, cmap='gray'), plt.title("Imagen Ecualizada 3x3")
-plt.subplot(222), plt.imshow(ventana5x5, cmap='gray'), plt.title("Imagen Ecualizada 5x5")
-plt.subplot(223), plt.imshow(ventana15x15, cmap='gray'), plt.title("Imagen Ecualizada 15x15")
-plt.subplot(224), plt.imshow(ventana30x30, cmap='gray'), plt.title("Imagen Ecualizada 30x30")
-plt.show(block=False)
+if __name__ == "__main__":
+    # 1. Carga de imagen y contraste con ecualización global
+    img = cv2.imread("Imagen_con_detalles_escondidos.tif", cv2.IMREAD_GRAYSCALE)
+    ecua_global = cv2.equalizeHist(img)
 
-print(img.shape)
+    plt.figure(figsize=(10, 8))
+    plt.subplot(221), plt.imshow(img, cmap='gray'), plt.title("Imagen Original")
+    plt.subplot(222), plt.hist(img.flatten(), 256, [0, 256]), plt.title("Histograma Original")
+    plt.subplot(223), plt.imshow(ecua_global, cmap='gray'), plt.title("Ecualización Global")
+    plt.subplot(224), plt.hist(ecua_global.flatten(), 256, [0, 256]), plt.title("Histograma Ecualizado Global")
+    plt.tight_layout()
+    plt.show(block=False)
 
-'''
-1. el borde con el replicate esta bien? - RESUELTO, ES LO MISMO
-2. la imagen quedo mas grande que la original - RESUELTO
-3. el kernel toma el valor del borde creado, esta bien? - RESUELTO, AHORA SOLO TOMA EL VALOR DEL 
-PIXEL CENTRAL ECUALIZADO
+    # 2. PUNTO B: Detección de objetos ocultos con el Kernel Óptimo (17x17)
+    kernel_optimo = (17, 17)
+    img_optima = ecualizacion_local_histograma(img, kernel_optimo)
 
-'''
+    plt.figure(figsize=(8, 4))
+    plt.suptitle("Punto b: Revelado de objetos ocultos (Ventana óptima 17x17)", fontsize=13)
+    plt.subplot(121), plt.imshow(img, cmap='gray'), plt.title("Imagen Original")
+    plt.subplot(122), plt.imshow(img_optima, cmap='gray'), plt.title("Ecualización Local 17x17")
+    plt.tight_layout()
+    plt.show(block=False)
 
-# Comprobamos tipo de borde
-## Borde 15x15
+    # "--- DETALLES OCULTOS DETECTADOS (Ventana 17x17) ---"
+    # "1. Superior Izquierda : Cuadrado sólido pequeño"
+    # "2. Superior Derecha   : Línea diagonal ascendente"
+    # "3. Centro             : Letra 'a' minúscula"
+    # "4. Inferior Izquierda : Cuatro líneas horizontales paralelas"
+    # "5. Inferior Derecha   : Círculo sólido"
 
-ventana15x15_replicate = ecualizacion_local_histograma(img, (15,15))
-ventana15x15_constant = ecualizacion_local_histograma(img, (15,15),border=cv2.BORDER_CONSTANT)
-ventana15x15_reflect = ecualizacion_local_histograma(img, (15,15),border=cv2.BORDER_REFLECT)
-ventana15x15_default = ecualizacion_local_histograma(img, (15,15),border=cv2.BORDER_DEFAULT)
-ventana15x15_isolated = ecualizacion_local_histograma(img, (15,15),border=cv2.BORDER_ISOLATED)
-ventana15x15_wrap = ecualizacion_local_histograma(img, (15,15),border=cv2.BORDER_WRAP)
+    # 3. PUNTO C: Influencia del tamaño de la ventana (Comparativa)
+    ventana3x3 = ecualizacion_local_histograma(img, (3, 3))
+    ventana7x7 = ecualizacion_local_histograma(img, (7, 7))
+    # Reutilizamos img_optima (17x17) para no volver a calcularla
+    ventana35x35 = ecualizacion_local_histograma(img, (35, 35))
 
-plt.figure()
-plt.subplot(231), plt.imshow(ventana15x15_replicate, cmap='gray'), plt.title("REPLICATE")
-plt.subplot(232), plt.imshow(ventana15x15_constant, cmap='gray'), plt.title("CONSTANT")
-plt.subplot(233), plt.imshow(ventana15x15_reflect, cmap='gray'), plt.title("REFLECT")
-plt.subplot(234), plt.imshow(ventana15x15_default, cmap='gray'), plt.title("DEFAULT")
-plt.subplot(235), plt.imshow(ventana15x15_isolated, cmap='gray'), plt.title("ISOLATED")
-plt.subplot(236), plt.imshow(ventana15x15_wrap, cmap='gray'), plt.title("WRAP")
-plt.show(block=False)
-
-## Borde 3x3
-
-ventana3x3_replicate = ecualizacion_local_histograma(img, (3,3))
-ventana3x3_constant = ecualizacion_local_histograma(img, (3,3),border=cv2.BORDER_CONSTANT)
-ventana3x3_reflect = ecualizacion_local_histograma(img, (3,3),border=cv2.BORDER_REFLECT)
-ventana3x3_default = ecualizacion_local_histograma(img, (3,3),border=cv2.BORDER_DEFAULT)
-ventana3x3_isolated = ecualizacion_local_histograma(img, (3,3),border=cv2.BORDER_ISOLATED)
-ventana3x3_wrap = ecualizacion_local_histograma(img, (3,3),border=cv2.BORDER_WRAP)
-
-plt.figure()
-plt.subplot(231), plt.imshow(ventana3x3_replicate, cmap='gray'), plt.title("REPLICATE")
-plt.subplot(232), plt.imshow(ventana3x3_constant, cmap='gray'), plt.title("CONSTANT")
-plt.subplot(233), plt.imshow(ventana3x3_reflect, cmap='gray'), plt.title("REFLECT")
-plt.subplot(234), plt.imshow(ventana3x3_default, cmap='gray'), plt.title("DEFAULT")
-plt.subplot(235), plt.imshow(ventana3x3_isolated, cmap='gray'), plt.title("ISOLATED")
-plt.subplot(236), plt.imshow(ventana3x3_wrap, cmap='gray'), plt.title("WRAP")
-plt.show(block=False)
-
-## Borde 30x30
-
-ventana30x30_replicate = ecualizacion_local_histograma(img, (30,30))
-ventana30x30_constant = ecualizacion_local_histograma(img, (30,30),border=cv2.BORDER_CONSTANT)
-ventana30x30_reflect = ecualizacion_local_histograma(img, (30,30),border=cv2.BORDER_REFLECT)
-ventana30x30_default = ecualizacion_local_histograma(img, (30,30),border=cv2.BORDER_DEFAULT)
-ventana30x30_isolated = ecualizacion_local_histograma(img, (30,30),border=cv2.BORDER_ISOLATED)
-ventana30x30_wrap = ecualizacion_local_histograma(img, (30,30),border=cv2.BORDER_WRAP)
-
-plt.figure()
-plt.subplot(231), plt.imshow(ventana30x30_replicate, cmap='gray'), plt.title("REPLICATE")
-plt.subplot(232), plt.imshow(ventana30x30_constant, cmap='gray'), plt.title("CONSTANT")
-plt.subplot(233), plt.imshow(ventana30x30_reflect, cmap='gray'), plt.title("REFLECT")
-plt.subplot(234), plt.imshow(ventana30x30_default, cmap='gray'), plt.title("DEFAULT")
-plt.subplot(235), plt.imshow(ventana30x30_isolated, cmap='gray'), plt.title("ISOLATED")
-plt.subplot(236), plt.imshow(ventana30x30_wrap, cmap='gray'), plt.title("WRAP")
-plt.show(block=False)
-
-# Conclusion: el tipo de borde afecta principalmente a ventanas de procesamiento grandes a los \n
-# contornos, no afecta el procesamiento interno de la imagen.
+    plt.figure(figsize=(10, 8))
+    plt.suptitle("Punto c: Influencia del tamaño de la ventana (MxN)", fontsize=14)
+    plt.subplot(221), plt.imshow(ventana3x3, cmap='gray'), plt.title("Ventana 3x3 (Huecos y alto ruido)")
+    plt.subplot(222), plt.imshow(ventana7x7, cmap='gray'), plt.title("Ventana 7x7 (Transición)")
+    plt.subplot(223), plt.imshow(img_optima, cmap='gray'), plt.title("Ventana 17x17 (Óptima)")
+    plt.subplot(224), plt.imshow(ventana35x35, cmap='gray'), plt.title("Ventana 35x35 (Menor ruido, mayor costo)")
+    plt.tight_layout()
+    plt.show()
