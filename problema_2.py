@@ -117,17 +117,15 @@ plt.figure(), plt.imshow(img_th,cmap='gray'),plt.show(block=False)
 
 nombres_campos = ["Legajo", "Nombre y apellido", "Parcial 1", "Parcial 2", "Parcial 3", "Condición Final"]
 registros = []
-for ir in range(1, len(lineas_h) - 1):
-    y1 = lineas_h[ir][1] + 1
-    y2 = lineas_h[ir + 1][0]
+for ir in range(1, len(lineas_h) - 1):          # +1 usamos para descartar la linea del excel
+    y1 = lineas_h[ir][1] + 1                    # linea superior
+    y2 = lineas_h[ir + 1][0]                    # linea inferior
     campos = []
     for ic in range(1, len(lineas_v) - 1):
-        x1 = lineas_v[ic][1] + 1
-        x2 = lineas_v[ic + 1][0]
+        x1 = lineas_v[ic][1] + 1                # descarta linea izquierda  
+        x2 = lineas_v[ic + 1][0]                # linea derecha
         campos.append({"nombre": nombres_campos[ic - 1], "cord": [y1, x1, y2, x2], "img": img[y1:y2, x1:x2]})
-        registros.append({"ir": ir, "campos": campos})
-    
-registros
+    registros.append({"ir": ir, "campos": campos})   
     
 
     
