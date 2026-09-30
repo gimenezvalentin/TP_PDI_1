@@ -89,7 +89,6 @@ stats = stats[ix_area,:]
 
 num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(filas[0]["img"],stats=stats, connectivity=8, ltype=cv2.CV_32S)  # https://docs.opencv.org/4.5.3/d3/dc0/group__imgproc__shape.html#ga107a78bf7cd25dec05fb4dfc5c9e765f
 
-
 num_labels
 stats
 centroids
