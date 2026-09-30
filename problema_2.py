@@ -1,10 +1,11 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
 
 # Como primer objetivo tenemos que detectar los renglones en el excel
 
-img_vacia = cv2.imread("grade_sheet_1.png",cv2.IMREAD_GRAYSCALE)
+img_vacia = cv2.imread("grade_sheet_empty.png",cv2.IMREAD_GRAYSCALE)
 plt.figure(), plt.imshow(img_vacia, cmap='gray'), plt.title("Excel Vacio"), plt.show(block=False)
 
 img_vacia_zeros = img_vacia < 5
@@ -97,3 +98,36 @@ np.unique(labels)
 plt.figure(), plt.imshow(labels,cmap='gray'),plt.show(block=False)
 plt.figure(), plt.imshow(filas[0]["img"],cmap='gray'),plt.show(block=False)
 
+def detectar_lineas(img_th, eje, factor=0.5):
+    suma = np.sum(img_th, eje)                  # eje=0 -> suma por columna | eje=1 -> suma por fila (como en ej2.py)
+    suma_th = suma > factor * suma.max()  # True donde hay línea (muchos más píxeles que en el resto)
+    print(suma_th)
+    x = np.diff(suma_th)                        # Igual que en Letras: detecta los cambios F->T y T->F
+    lineas_idxs = np.argwhere(x)
+    ii = np.arange(0, len(lineas_idxs), 2)      # Corrijo los inicios (+1), como en Letras
+    lineas_idxs[ii] += 1
+    return lineas_idxs.reshape((-1, 2))         # Cada fila: [inicio, fin] de una línea
+
+img = cv2.imread("grade_sheet_1.png", cv2.IMREAD_GRAYSCALE)
+img_th = img < 150                              # Con < 5 las letras quedan cortadas
+lineas_h = detectar_lineas(img_th, 1)           # 22 líneas horizontales
+lineas_v = detectar_lineas(img_th, 0)           # 8 líneas verticales
+
+plt.figure(), plt.imshow(img_th,cmap='gray'),plt.show(block=False)
+
+nombres_campos = ["Legajo", "Nombre y apellido", "Parcial 1", "Parcial 2", "Parcial 3", "Condición Final"]
+registros = []
+for ir in range(1, len(lineas_h) - 1):
+    y1 = lineas_h[ir][1] + 1
+    y2 = lineas_h[ir + 1][0]
+    campos = []
+    for ic in range(1, len(lineas_v) - 1):
+        x1 = lineas_v[ic][1] + 1
+        x2 = lineas_v[ic + 1][0]
+        campos.append({"nombre": nombres_campos[ic - 1], "cord": [y1, x1, y2, x2], "img": img[y1:y2, x1:x2]})
+        registros.append({"ir": ir, "campos": campos})
+    
+registros
+    
+
+    
