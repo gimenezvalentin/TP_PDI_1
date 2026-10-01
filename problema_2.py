@@ -142,11 +142,60 @@ for ir in range(1, len(lineas_h) - 1):          # +1 (por heurística) usamos pa
 plt.figure()
 plt.suptitle("Primer fila de registros")
 subplot = 321
-for fila in registros[1]["campos"]:
+for fila in registros[0]["campos"]:
     plt.subplot(subplot)
     plt.title(fila["nombre"])
     plt.imshow(fila["img"],cmap='gray')
     subplot += 1
 plt.show(block=False)
+
+# --------------- PUSH ANTERIOR ARRIBA ------------------------
+
+def analizar_celda(celda, th_area=2, th_espacio=7):
+    celda_bin = (celda < 150).astype(np.uint8)                          # letras = 1, fondo = 0
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(celda_bin, connectivity=8, ltype=cv2.CV_32S)
+    stats = stats[1:, :]                                                # descartamos el fondo (etiqueta 0)
+
+    ix_area = stats[:, -1] > th_area                                    # sacamos componentes muy chicas
+    stats = stats[ix_area, :]
+
+    alto, ancho = celda_bin.shape                                       # seguridad: saco restos de línea (bbox del tamaño de la celda)
+    ix_linea = (stats[:, 2] >= ancho - 2)
+    ix_linea = (stats[:, 3] >= alto - 2)
+    stats = stats[~ix_linea, :]
+    stats = stats[np.argsort(stats[:, 0]), :]                           # ordeno de izquierda a derecha
+    
+    n_car = len(stats)
+    espacios = stats[1:, 0] - (stats[:-1, 0] + stats[:-1, 2])           # hueco entre letras consecutivas (hay que cambiar, muy dificil)
+    print(espacios) 
+    n_pal = 0 if n_car == 0 else 1 + np.sum(espacios > th_espacio)
+    return n_car, n_pal, stats, celda_bin
+
+# Distintos casos según th_area
+## Con th_area = 30, nos detecta la mayoría de letras.
+celda = registros[0]["campos"][0]["img"]
+n_car, n_pal, stats, celda_bin = analizar_celda(celda,th_area=30)
+celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
+for st in stats:
+    cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
+plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
+
+## Con th_area = 15, incluye caracter como "/".
+celda = registros[0]["campos"][0]["img"]
+n_car, n_pal, stats, celda_bin = analizar_celda(celda,th_area=15)
+celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
+for st in stats:
+    cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
+plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
+
+
+## Optimo th_area = 2, incluye "-" y puede descartar algun pixel suelto que genere ruido en la imagen.
+celda = registros[0]["campos"][0]["img"]
+n_car, n_pal, stats, celda_bin = analizar_celda(celda)
+celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
+for st in stats:
+    cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
+plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
+
 
     
