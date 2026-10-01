@@ -101,7 +101,7 @@ plt.figure(), plt.imshow(filas[0]["img"],cmap='gray'),plt.show(block=False)
 def detectar_lineas(img_th, eje, factor=0.5):
     suma = np.sum(img_th, eje)                  # eje=0 -> suma por columna | eje=1 -> suma por fila (como en ej2.py)
     suma_th = suma > factor * suma.max()        # True donde hay línea (muchos más píxeles que en el resto)
-    
+
     x = np.diff(suma_th)                        # Igual que en Letras: detecta los cambios F->T y T->F
     lineas_idxs = np.argwhere(x)
     ii = np.arange(0, len(lineas_idxs), 2)      # Corrijo los inicios (+1), como en Letras
@@ -118,9 +118,9 @@ lineas_v = detectar_lineas(img_th, 0)           # 8 líneas verticales
 
 lineas_h, lineas_v      # Ejecutar para entender el siguiente análisis.
 
-# Analizando el diferencial que marca la línea detectada del excel en lineas_h y lienas_v
+# Analizando el diferencial que marca la línea detectada del excel en lineas_h y líneas_v
 # podemos deducir que, en este problema en particular, para toda línea del excel el rango de pixels
-# es siempre 1. Ya que en líneas_h -> el límite_sup = límite_inf y en líenas_v -> límite_izq = límite_der
+# es siempre 1. Ya que en líneas_h -> el límite_sup = límite_inf y en líneas_v -> límite_izq = límite_der
 # para toda línea en el excel.
 
 # Por heurística del problema con el análisis correspondiente vamos a utilizar esta información para
@@ -149,27 +149,37 @@ for fila in registros[0]["campos"]:
     subplot += 1
 plt.show(block=False)
 
-# --------------- PUSH ANTERIOR ARRIBA ------------------------
-
 def analizar_celda(celda, th_area=2, th_espacio=7):
-    celda_bin = (celda < 150).astype(np.uint8)                          # letras = 1, fondo = 0
+    celda_bin = (celda < 150).astype(np.uint8)          # Binarizo: letras = 1, fondo = 0
+
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(celda_bin, connectivity=8, ltype=cv2.CV_32S)
-    stats = stats[1:, :]                                                # descartamos el fondo (etiqueta 0)
+    alto_celda, ancho_celda = celda_bin.shape
 
-    ix_area = stats[:, -1] > th_area                                    # sacamos componentes muy chicas
-    stats = stats[ix_area, :]
-
-    alto, ancho = celda_bin.shape                                       # seguridad: saco restos de línea (bbox del tamaño de la celda)
-    ix_linea = (stats[:, 2] >= ancho - 2)
-    ix_linea = (stats[:, 3] >= alto - 2)
-    stats = stats[~ix_linea, :]
-    stats = stats[np.argsort(stats[:, 0]), :]                           # ordeno de izquierda a derecha
+    caracteres = []
+    for st in stats[1:]:                                    # stats[0] es el fondo, lo salteo
+        x, y, ancho, alto, area = st
+        if area <= th_area:                                 # si el área es muy chica: ruido
+            continue
+        if ancho >= ancho_celda - 2 or alto >= alto_celda - 2:   # tamaño de la celda: resto de línea
+            continue
+        caracteres.append(st)
+    caracteres = sorted(caracteres, key=lambda st: st[0])   # ordeno por x (de izquierda a derecha)
+    n_car = len(caracteres)
     
-    n_car = len(stats)
-    espacios = stats[1:, 0] - (stats[:-1, 0] + stats[:-1, 2])           # hueco entre letras consecutivas (hay que cambiar, muy dificil)
-    print(espacios) 
-    n_pal = 0 if n_car == 0 else 1 + np.sum(espacios > th_espacio)
-    return n_car, n_pal, stats, celda_bin
+    # Cuento palabras mirando el espacio entre letras vecinas
+    if n_car == 0:
+        n_pal = 0
+    else:
+        n_pal = 1                                           # si hay letras, hay al menos 1 palabra
+        for i in range(1, n_car):
+            letra_anterior = caracteres[i - 1]
+            letra_actual = caracteres[i]
+            fin_anterior = letra_anterior[0] + letra_anterior[2]    # x + ancho
+            inicio_actual = letra_actual[0]                         # x
+            espacio = inicio_actual - fin_anterior
+            if espacio > th_espacio:                          # espacio grande = nueva palabra
+                n_pal += 1
+    return n_car, n_pal, np.array(caracteres), celda_bin
 
 # Distintos casos según th_area
 ## Con th_area = 30, nos detecta la mayoría de letras.
@@ -198,4 +208,11 @@ for st in stats:
 plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
 
 
-    
+def validar_campo(nombre, n_car, n_pal):
+    if nombre == "Legajo":
+        return n_car == 8 and n_pal == 1
+    if nombre == "Nombre y apellido":
+        return n_pal >= 2 and n_car <= 12
+    if nombre == "Condición Final":
+        return n_car == 1
+    return 1 <= n_car <= 2 and n_pal == 1                               # Parciales 1, 2 y 3
