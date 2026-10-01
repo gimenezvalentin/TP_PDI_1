@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 def ecualizacion_local_histograma(imagen:np.ndarray,MxN: tuple,border = cv2.BORDER_REPLICATE)-> np.ndarray:
     '''
@@ -38,8 +39,24 @@ def ecualizacion_local_histograma(imagen:np.ndarray,MxN: tuple,border = cv2.BORD
 #----------Ejecucion-----------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    # 1. Carga de imagen y contraste con ecualización global
-    img = cv2.imread("Imagen_con_detalles_escondidos.tif", cv2.IMREAD_GRAYSCALE)
+    # Determinación robusta de la carpeta del ejercicio (problema_1)
+    if "__file__" in globals():
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    else:
+        base_dir = os.path.abspath("problema_1") if os.path.exists("problema_1") else os.getcwd()
+
+    input_dir = os.path.join(base_dir, "input")
+    output_dir = os.path.join(base_dir, "output")
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 1. Carga de imagen desde carpeta 'input' y contraste con ecualización global
+    ruta_imagen = os.path.join(input_dir, "Imagen_con_detalles_escondidos.tif")
+    img = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
+
+    if img is None:
+        raise FileNotFoundError(f"No se encontró la imagen en: {ruta_imagen}.\nVerifica que esté dentro de 'problema_1/input/'.")
+
     ecua_global = cv2.equalizeHist(img)
 
     plt.figure(figsize=(10, 8))
@@ -82,3 +99,10 @@ if __name__ == "__main__":
     plt.subplot(224), plt.imshow(ventana35x35, cmap='gray'), plt.title("Ventana 35x35 (Menor ruido, mayor costo)")
     plt.tight_layout()
     plt.show()
+
+    # Guardado de todas las imágenes resultantes en 'problema_1/output'
+    cv2.imwrite(os.path.join(output_dir, "ecualizacion_global.tif"), ecua_global)
+    cv2.imwrite(os.path.join(output_dir, "ecualizacion_local_17x17.tif"), img_optima.astype(np.uint8))
+    cv2.imwrite(os.path.join(output_dir, "ecualizacion_local_3x3.tif"), ventana3x3.astype(np.uint8))
+    cv2.imwrite(os.path.join(output_dir, "ecualizacion_local_7x7.tif"), ventana7x7.astype(np.uint8))
+    cv2.imwrite(os.path.join(output_dir, "ecualizacion_local_35x35.tif"), ventana35x35.astype(np.uint8))
