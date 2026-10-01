@@ -100,32 +100,53 @@ plt.figure(), plt.imshow(filas[0]["img"],cmap='gray'),plt.show(block=False)
 
 def detectar_lineas(img_th, eje, factor=0.5):
     suma = np.sum(img_th, eje)                  # eje=0 -> suma por columna | eje=1 -> suma por fila (como en ej2.py)
-    suma_th = suma > factor * suma.max()  # True donde hay línea (muchos más píxeles que en el resto)
-    print(suma_th)
+    suma_th = suma > factor * suma.max()        # True donde hay línea (muchos más píxeles que en el resto)
+    
     x = np.diff(suma_th)                        # Igual que en Letras: detecta los cambios F->T y T->F
     lineas_idxs = np.argwhere(x)
     ii = np.arange(0, len(lineas_idxs), 2)      # Corrijo los inicios (+1), como en Letras
     lineas_idxs[ii] += 1
+
     return lineas_idxs.reshape((-1, 2))         # Cada fila: [inicio, fin] de una línea
 
 img = cv2.imread("grade_sheet_1.png", cv2.IMREAD_GRAYSCALE)
 img_th = img < 150                              # Con < 5 las letras quedan cortadas
+plt.figure(), plt.imshow(img_th,cmap='gray'),plt.show(block=False)
+
 lineas_h = detectar_lineas(img_th, 1)           # 22 líneas horizontales
 lineas_v = detectar_lineas(img_th, 0)           # 8 líneas verticales
 
-plt.figure(), plt.imshow(img_th,cmap='gray'),plt.show(block=False)
+lineas_h, lineas_v      # Ejecutar para entender el siguiente análisis.
+
+# Analizando el diferencial que marca la línea detectada del excel en lineas_h y lienas_v
+# podemos deducir que, en este problema en particular, para toda línea del excel el rango de pixels
+# es siempre 1. Ya que en líneas_h -> el límite_sup = límite_inf y en líenas_v -> límite_izq = límite_der
+# para toda línea en el excel.
+
+# Por heurística del problema con el análisis correspondiente vamos a utilizar esta información para
+# borrar las líneas. También armamos la estructura para el posterior análisis.
 
 nombres_campos = ["Legajo", "Nombre y apellido", "Parcial 1", "Parcial 2", "Parcial 3", "Condición Final"]
 registros = []
-for ir in range(1, len(lineas_h) - 1):          # +1 usamos para descartar la linea del excel
-    y1 = lineas_h[ir][1] + 1                    # linea superior
-    y2 = lineas_h[ir + 1][0]                    # linea inferior
+for ir in range(1, len(lineas_h) - 1):          # +1 (por heurística) usamos para descartar la línea superior del excel
+    y1 = lineas_h[ir][1] + 1                    # límite superior
+    y2 = lineas_h[ir + 1][0]                    # límite inferior
     campos = []
-    for ic in range(1, len(lineas_v) - 1):
-        x1 = lineas_v[ic][1] + 1                # descarta linea izquierda  
-        x2 = lineas_v[ic + 1][0]                # linea derecha
+    for ic in range(1, len(lineas_v) - 1):      # +1 (por heurística) usamos para descartar la línea izquierda del excel
+        x1 = lineas_v[ic][1] + 1                # límite izquierdo  
+        x2 = lineas_v[ic + 1][0]                # límite derecho
         campos.append({"nombre": nombres_campos[ic - 1], "cord": [y1, x1, y2, x2], "img": img[y1:y2, x1:x2]})
     registros.append({"ir": ir, "campos": campos})   
-    
+
+# Visualizamos la primera fila de registros
+plt.figure()
+plt.suptitle("Primer fila de registros")
+subplot = 321
+for fila in registros[1]["campos"]:
+    plt.subplot(subplot)
+    plt.title(fila["nombre"])
+    plt.imshow(fila["img"],cmap='gray')
+    subplot += 1
+plt.show(block=False)
 
     
