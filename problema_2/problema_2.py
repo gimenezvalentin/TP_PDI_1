@@ -2,101 +2,17 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+import os
 
-# Como primer objetivo tenemos que detectar los renglones en el excel
+if "__file__" in globals():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+else:
+    base_dir = os.path.abspath("problema_2") if os.path.exists("problema_2") else os.getcwd()
 
-img_vacia = cv2.imread("grade_sheet_empty.png",cv2.IMREAD_GRAYSCALE)
-plt.figure(), plt.imshow(img_vacia, cmap='gray'), plt.title("Excel Vacio"), plt.show(block=False)
+input_dir = os.path.join(base_dir, "input")
+output_dir = os.path.join(base_dir, "output")
 
-img_vacia_zeros = img_vacia < 5
-plt.figure(), plt.imshow(img_vacia_zeros, cmap='gray'), plt.title("Excel Vacio Bool"), plt.show(block=False)
-
-cols = np.sum(img_vacia_zeros,0)
-cols_ordenado = np.sort(np.unique(cols))
-cols_idx = np.argwhere(cols == cols_ordenado[-1])
-cols_idx = np.append(cols_idx, np.argwhere(cols == cols_ordenado[-2]))
-cols_idx = np.sort(cols_idx)
-#r_idxs = np.reshape(cols_idx, (-1,2)) # Re-ordeno de a pares
-
-columnas = []
-for idx,c in enumerate(cols_idx):
-    if idx == 0:
-        columna_anterior = c
-        continue
-
-    columnas.append(
-    {"idx": idx,
-    "img": img_vacia[:,columna_anterior:c],
-    "inicio_col": columna_anterior,
-    "termina_col": c
-    }
-    )
-    columna_anterior = c
-
-plt.figure()
-subplot = 101 + len(columnas)*10
-for c in columnas:
-    plt.subplot(subplot)
-    plt.imshow(c["img"],cmap="gray")
-    plt.title(f"Columna {c["idx"]}")
-    subplot += 1
-plt.show()
-
-# -----------------------
-
-filas = []
-for col in columnas:
-    columna_zeros = col["img"] < 5
-    #plt.figure(), plt.imshow(col["img"][1],cmap='gray'),plt.show()
-    rows = np.sum(columna_zeros,1)
-    rows_idx = np.argwhere(rows == rows.max())
-
-    for idx,fila in enumerate(rows_idx):
-        if idx == 0:
-            fila_anterior = fila
-            continue
-        
-
-        filas.append(
-        {"idx": idx,
-         "indice_columna": col["idx"],
-        "img": img_vacia[fila_anterior[0]:fila[0],col["inicio_col"]:col["termina_col"]]
-        }
-        )
-        #plt.figure(), plt.imshow(img_vacia[fila_anterior[0]:fila[0],col["inicio_col"]:col["termina_col"]],cmap='gray'),plt.show()
-        fila_anterior = fila
-
-plt.figure()
-subplot = 241
-for f in filas:
-    plt.subplot(subplot)
-    plt.imshow(f["img"],cmap="gray")
-    plt.title(f"Fila {f["idx"]}")
-    subplot += 1
-    if subplot == 249:
-        break
-plt.show(block=False)
-
-# DETECTAR CARACTES
-
-num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(filas[0]["img"], connectivity=8, ltype=cv2.CV_32S)  # https://docs.opencv.org/4.5.3/d3/dc0/group__imgproc__shape.html#ga107a78bf7cd25dec05fb4dfc5c9e765f
-# num_labels: Cantidad de elementos
-# labels: Matriz con etiquetas
-# stats: Matriz de estadisticas de los elementos (bounding box + area)
-# centroids: Centroides de elementos
-th_area = 160
-ix_area = stats[:,-1] > th_area
-stats = stats[ix_area,:]
-
-num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(filas[0]["img"],stats=stats, connectivity=8, ltype=cv2.CV_32S)  # https://docs.opencv.org/4.5.3/d3/dc0/group__imgproc__shape.html#ga107a78bf7cd25dec05fb4dfc5c9e765f
-
-num_labels
-stats
-centroids
-labels
-np.unique(labels)
-plt.figure(), plt.imshow(labels,cmap='gray'),plt.show(block=False)
-plt.figure(), plt.imshow(filas[0]["img"],cmap='gray'),plt.show(block=False)
+os.makedirs(output_dir, exist_ok=True)
 
 def detectar_lineas(img_th, eje, factor=0.5):
     suma = np.sum(img_th, eje)                  # eje=0 -> suma por columna | eje=1 -> suma por fila (como en ej2.py)
@@ -109,7 +25,7 @@ def detectar_lineas(img_th, eje, factor=0.5):
 
     return lineas_idxs.reshape((-1, 2))         # Cada fila: [inicio, fin] de una línea
 
-img = cv2.imread("grade_sheet_1.png", cv2.IMREAD_GRAYSCALE)
+img = cv2.imread(os.path.join(input_dir, "grade_sheet_1.png"), cv2.IMREAD_GRAYSCALE)
 img_th = img < 150                              # Con < 5 las letras quedan cortadas
 plt.figure(), plt.imshow(img_th,cmap='gray'),plt.show(block=False)
 
@@ -216,7 +132,6 @@ def validar_campo(nombre, n_car, n_pal):
         return n_car == 1
     return 1 <= n_car <= 2 and n_pal == 1                               # Parciales 1, 2 y 3
 
-# ------------- PUSH ARRIBA DE ESTO -------------
 # Analizamos primera fila del excel
 for reg in registros[0]["campos"]:
     celda = reg["img"]
@@ -225,11 +140,11 @@ for reg in registros[0]["campos"]:
     print(f"{reg["nombre"]}: {estado}")
 
 
-def clasificar_condicion(celda_bin, stats): # decir que lo del fondo lo resolvimos con IA!!!!!!!!!
+def clasificar_condicion(celda_bin, stats):
     x, y, w, h, area = stats[0]
     letra = celda_bin[y:y+h, x:x+w] 
 
-    fondo = cv2.copyMakeBorder(1 - letra, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=1)   # borde para unir el fondo exterior
+    fondo = cv2.copyMakeBorder(1 - letra, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=1)   # borde para unir el fondo exterior (ayuda con IA)
     num_labels, labels, st, cen = cv2.connectedComponentsWithStats(fondo, connectivity=8, ltype=cv2.CV_32S)
     n_agujeros = num_labels - 2                                                       # resto etiqueta 0 y el fondo exterior
     col_izq_llena = letra[:, 0].sum() == h                                            # resto etiqueta 0 y el fondo exterior
@@ -249,10 +164,11 @@ for i in range(0,13):
         print(f"Condicion final: {letra}")
         print("---------------------")
 
-# -----------------------------------
-
-def procesar_planilla(ruta):
-    img = cv2.imread(ruta, cv2.IMREAD_GRAYSCALE)
+def procesar_planilla(nombre_archivo, input_dir, output_dir):
+    ruta_imagen = os.path.join(input_dir, nombre_archivo)
+    img = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        raise FileNotFoundError(f"No se encontró la imagen en: {ruta_imagen}.\nVerifica que esté dentro de 'problema_2/input/'.")
     img_th = img < 150
     lineas_h = detectar_lineas(img_th, 1)
     lineas_v = detectar_lineas(img_th, 0)
@@ -260,7 +176,7 @@ def procesar_planilla(ruta):
     filas_salida = []
     nombres_campos = ["Legajo", "Nombre y apellido", "Parcial 1", "Parcial 2", "Parcial 3", "Condición Final"]
     for ir in range(1, len(lineas_h) - 1):
-        y1 = lineas_h[ir][1] + 1
+        y1 = lineas_h[ir][1] + 1        # +1 (heurística)
         y2 = lineas_h[ir + 1][0]
         print(f"> Registro {ir}:")
         resultados = []
@@ -272,10 +188,36 @@ def procesar_planilla(ruta):
             n_car, n_pal, stats, celda_bin = analizar_celda(img[y1:y2, x1:x2])
             ok = validar_campo(nombre, n_car, n_pal)
             resultados.append("OK" if ok else "MAL")
-            print(f"> {nombre}: {'OK' if ok else 'MAL'}")
+            print(f"> {nombre}: {'OK' if ok else 'MAL'}")                # (a) mostramos por terminal
         print(">")
+        filas_csv.append([ir] + resultados)
+        condicion_final = celda_bin                                      # celda_bin = ultima celda del excel
+        if all(r == "OK" for r in resultados):                           # (b) solo registros correctos
+            cond = clasificar_condicion(condicion_final, stats)          # celda_bin/stats de la última columna
+            if cond in ("L", "R"):
+                x1n = lineas_v[2][1] + 1                                 # columna Nombre y Apellido
+                x2n = lineas_v[3][0]                                     
+                crop = cv2.cvtColor(img[y1:y2, x1n:x2n], cv2.COLOR_GRAY2RGB)
+                etiqueta = np.full((y2 - y1, 110, 3), 255, dtype=np.uint8)  # (alto, ancho, canales)
+                color = (255, 140, 0) if cond == "R" else (255, 0, 0)       # (255, 140, 0) = amarillo
+                texto = "RECUPERA" if cond == "R" else "LIBRE"
+                cv2.putText(etiqueta, texto, (5, (y2 - y1) - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1)  # (5, (y2 - y1) - 8) = abajo a la izquierda de la etiqueta
+                filas_salida.append(np.hstack([crop, etiqueta]))            # np.hstack: pone una matriz al lado de la otra (ayuda con IA)
+    nombre_base = os.path.splitext(nombre_archivo)[0]                                   
+    with open(os.path.join(output_dir, f"{nombre_base}_validacion.csv"), "w", newline="", encoding="utf-8") as f:   # (c)
+        writer = csv.writer(f)
+        writer.writerow(["ID"] + nombres_campos)
+        writer.writerows(filas_csv)
+    if filas_salida:                                                     # (b) única imagen de salida
+        salida = np.vstack(filas_salida)                                 # np.vstack: apila las matrices verticalmente
+        plt.figure(), plt.imshow(salida), plt.title(f"No aprobados - {nombre_archivo}"), plt.show(block=False)
+        cv2.imwrite(os.path.join(output_dir, f"{nombre_base}_no_aprobados.png"), cv2.cvtColor(salida, cv2.COLOR_RGB2BGR))   # OpenCV guarda en BGR
 
-procesar_planilla("grade_sheet_2.png")
-for k in range(1, 5):                                                    # (d) forma cíclica
-    print(f"===== grade_sheet_{k}.png =====")
-    procesar_planilla(f"grade_sheet_{k}.png")
+# ---------- Ejecucion y guardado final ----------
+
+if __name__ == "__main__":
+    # (d) Procesamiento cíclico de todas las planillas de 'input' (sin la vacía)
+    for nombre_archivo in sorted(os.listdir(input_dir)):
+        if nombre_archivo.startswith("grade_sheet_") and nombre_archivo != "grade_sheet_empty.png":
+            print(f"===== {nombre_archivo} =====")
+            procesar_planilla(nombre_archivo, input_dir, output_dir)
