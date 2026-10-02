@@ -207,7 +207,6 @@ for st in stats:
     cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
 plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
 
-
 def validar_campo(nombre, n_car, n_pal):
     if nombre == "Legajo":
         return n_car == 8 and n_pal == 1
@@ -216,3 +215,67 @@ def validar_campo(nombre, n_car, n_pal):
     if nombre == "Condición Final":
         return n_car == 1
     return 1 <= n_car <= 2 and n_pal == 1                               # Parciales 1, 2 y 3
+
+# ------------- PUSH ARRIBA DE ESTO -------------
+# Analizamos primera fila del excel
+for reg in registros[0]["campos"]:
+    celda = reg["img"]
+    n_car, n_pal, stats, celda_bin = analizar_celda(celda)
+    estado = "OK" if validar_campo(reg["nombre"],n_car,n_pal) else "MAL"
+    print(f"{reg["nombre"]}: {estado}")
+
+
+def clasificar_condicion(celda_bin, stats): # decir que lo del fondo lo resolvimos con IA!!!!!!!!!
+    x, y, w, h, area = stats[0]
+    letra = celda_bin[y:y+h, x:x+w] 
+
+    fondo = cv2.copyMakeBorder(1 - letra, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=1)   # borde para unir el fondo exterior
+    num_labels, labels, st, cen = cv2.connectedComponentsWithStats(fondo, connectivity=8, ltype=cv2.CV_32S)
+    n_agujeros = num_labels - 2                                                       # resto etiqueta 0 y el fondo exterior
+    col_izq_llena = letra[:, 0].sum() == h                                            # resto etiqueta 0 y el fondo exterior
+    if n_agujeros == 0 and col_izq_llena:
+        return "L"      
+    if n_agujeros == 1 and col_izq_llena:
+        return "R"
+    return "A"
+
+for i in range(0,13):
+    cond = registros[i]["campos"][5]
+    n_car, n_pal, stat, celda_bin = analizar_celda(cond["img"])
+
+    if validar_campo(cond["nombre"],n_car,n_pal):
+        letra = clasificar_condicion(celda_bin, stat)
+        print(f"Registro {i}:")
+        print(f"Condicion final: {letra}")
+        print("---------------------")
+
+# -----------------------------------
+
+def procesar_planilla(ruta):
+    img = cv2.imread(ruta, cv2.IMREAD_GRAYSCALE)
+    img_th = img < 150
+    lineas_h = detectar_lineas(img_th, 1)
+    lineas_v = detectar_lineas(img_th, 0)
+    filas_csv = []
+    filas_salida = []
+    nombres_campos = ["Legajo", "Nombre y apellido", "Parcial 1", "Parcial 2", "Parcial 3", "Condición Final"]
+    for ir in range(1, len(lineas_h) - 1):
+        y1 = lineas_h[ir][1] + 1
+        y2 = lineas_h[ir + 1][0]
+        print(f"> Registro {ir}:")
+        resultados = []
+        for ic in range(1, len(lineas_v) - 1):
+            x1 = lineas_v[ic][1] + 1
+            x2 = lineas_v[ic + 1][0]
+            nombre = nombres_campos[ic - 1]
+            # -------------------------
+            n_car, n_pal, stats, celda_bin = analizar_celda(img[y1:y2, x1:x2])
+            ok = validar_campo(nombre, n_car, n_pal)
+            resultados.append("OK" if ok else "MAL")
+            print(f"> {nombre}: {'OK' if ok else 'MAL'}")
+        print(">")
+
+procesar_planilla("grade_sheet_2.png")
+for k in range(1, 5):                                                    # (d) forma cíclica
+    print(f"===== grade_sheet_{k}.png =====")
+    procesar_planilla(f"grade_sheet_{k}.png")
