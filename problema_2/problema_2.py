@@ -11,10 +11,12 @@ else:
 
 input_dir = os.path.join(base_dir, "input")
 output_dir = os.path.join(base_dir, "output")
-
 os.makedirs(output_dir, exist_ok=True)
 
 def detectar_lineas(img_th, eje, factor=0.5):
+    '''
+    Recibe una imagen umbralada y devuelve una lista con el inicio y fin de cada línea.
+    '''
     suma = np.sum(img_th, eje)                  # eje=0 -> suma por columna | eje=1 -> suma por fila (como en ej2.py)
     suma_th = suma > factor * suma.max()        # True donde hay línea (muchos más píxeles que en el resto)
 
@@ -42,6 +44,32 @@ lineas_h, lineas_v      # Ejecutar para entender el siguiente análisis.
 # Por heurística del problema con el análisis correspondiente vamos a utilizar esta información para
 # borrar las líneas. También armamos la estructura para el posterior análisis.
 
+# Comprobamos para todos los archivos
+
+if __name__ == "__main__":
+    for nombre_archivo in sorted(os.listdir(input_dir)):
+        if nombre_archivo.startswith("grade_sheet_"):
+            ruta_imagen = os.path.join(input_dir, nombre_archivo)
+            img = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE) # Cargamos imagen
+            img_th = img < 150                              
+            
+            lineas_h = detectar_lineas(img_th, 1)
+            lineas_v = detectar_lineas(img_th, 0)
+
+            print(f"===== {nombre_archivo} =====")
+            # Si (límite_izq = límite_der) y (límite_sup = límite_inf) para todas las líneas
+            if all(x[1] - x[0] == 0 for x in lineas_v) and all(y[1] - y[0] == 0 for y in lineas_h):
+                print("Todas las líneas miden 1")
+            else:
+                print("Alguna línea tiene un grosor distinto")
+            
+# Guardamos los registros
+
+img = cv2.imread(os.path.join(input_dir, "grade_sheet_1.png"), cv2.IMREAD_GRAYSCALE)
+img_th = img < 150                              
+lineas_h = detectar_lineas(img_th, 1)           
+lineas_v = detectar_lineas(img_th, 0)
+
 nombres_campos = ["Legajo", "Nombre y apellido", "Parcial 1", "Parcial 2", "Parcial 3", "Condición Final"]
 registros = []
 for ir in range(1, len(lineas_h) - 1):          # +1 (por heurística) usamos para descartar la línea superior del excel
@@ -66,20 +94,27 @@ for fila in registros[0]["campos"]:
 plt.show(block=False)
 
 def analizar_celda(celda, th_area=2, th_espacio=7):
+    '''
+    Recibe una celda de registros y devuelve:
+    - n_car: Cantidad de caracteres detectados
+    - n_pal: Cantidad de palabras detectadas
+    - caracteres: Lista de stats sobre los caracteres detectados [x,y,ancho,alto,área]
+    - celda_bin: celda binarizada
+    '''
     celda_bin = (celda < 150).astype(np.uint8)          # Binarizo: letras = 1, fondo = 0
 
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(celda_bin, connectivity=8, ltype=cv2.CV_32S)
     alto_celda, ancho_celda = celda_bin.shape
 
     caracteres = []
-    for st in stats[1:]:                                    # stats[0] es el fondo, lo salteo
+    for st in stats[1:]:                                    # stats[0] es el fondo, lo salteamos
         x, y, ancho, alto, area = st
         if area <= th_area:                                 # si el área es muy chica: ruido
             continue
-        if ancho >= ancho_celda - 2 or alto >= alto_celda - 2:   # tamaño de la celda: resto de línea
+        if ancho >= ancho_celda - 2 or alto >= alto_celda - 2:   # si quedó algún resto de línea, lo salteamos
             continue
         caracteres.append(st)
-    caracteres = sorted(caracteres, key=lambda st: st[0])   # ordeno por x (de izquierda a derecha)
+    caracteres = sorted(caracteres, key=lambda st: st[0])   # ordenamos por x (de izquierda a derecha)
     n_car = len(caracteres)
     
     # Cuento palabras mirando el espacio entre letras vecinas
@@ -106,6 +141,7 @@ for st in stats:
     cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
 plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
 
+
 ## Con th_area = 15, incluye caracter como "/".
 celda = registros[0]["campos"][0]["img"]
 n_car, n_pal, stats, celda_bin = analizar_celda(celda,th_area=15)
@@ -124,15 +160,18 @@ for st in stats:
 plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
 
 def validar_campo(nombre, n_car, n_pal):
+    '''
+    Recibe datos de una celda y devuelve si los campos son correctos.
+    '''
     if nombre == "Legajo":
         return n_car == 8 and n_pal == 1
     if nombre == "Nombre y apellido":
         return n_pal >= 2 and n_car <= 12
     if nombre == "Condición Final":
         return n_car == 1
-    return 1 <= n_car <= 2 and n_pal == 1                               # Parciales 1, 2 y 3
+    return 1 <= n_car <= 2 and n_pal == 1       # Parciales 1, 2 y 3
 
-# Analizamos primera fila del excel
+# Analizamos primera fila de registros.
 for reg in registros[0]["campos"]:
     celda = reg["img"]
     n_car, n_pal, stats, celda_bin = analizar_celda(celda)
@@ -141,6 +180,13 @@ for reg in registros[0]["campos"]:
 
 
 def clasificar_condicion(celda_bin, stats):
+    '''
+    Debe recibir una celda binaria con la condición final y sus stats.
+    Devuelve si la condición es:
+    -"A": APROBADO
+    -"R": RECUPERA
+    -"L": LIBRE
+    '''
     x, y, w, h, area = stats[0]
     letra = celda_bin[y:y+h, x:x+w] 
 
@@ -154,16 +200,19 @@ def clasificar_condicion(celda_bin, stats):
         return "R"
     return "A"
 
-for i in range(0,13):
+# Analizamos un rango de condiciones
+for i in range(0,10):
     cond = registros[i]["campos"][5]
     n_car, n_pal, stat, celda_bin = analizar_celda(cond["img"])
 
+    # descartamos condiciones inválidas
     if validar_campo(cond["nombre"],n_car,n_pal):
         letra = clasificar_condicion(celda_bin, stat)
-        print(f"Registro {i}:")
+        print(f"Registro {i + 1}:")
         print(f"Condicion final: {letra}")
         print("---------------------")
 
+# Unificamos todas las funciones para analizar una tabla entera
 def procesar_planilla(nombre_archivo, input_dir, output_dir):
     ruta_imagen = os.path.join(input_dir, nombre_archivo)
     img = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
@@ -175,23 +224,27 @@ def procesar_planilla(nombre_archivo, input_dir, output_dir):
     filas_csv = []
     filas_salida = []
     nombres_campos = ["Legajo", "Nombre y apellido", "Parcial 1", "Parcial 2", "Parcial 3", "Condición Final"]
+
     for ir in range(1, len(lineas_h) - 1):
         y1 = lineas_h[ir][1] + 1        # +1 (heurística)
         y2 = lineas_h[ir + 1][0]
         print(f"> Registro {ir}:")
+
         resultados = []
         for ic in range(1, len(lineas_v) - 1):
             x1 = lineas_v[ic][1] + 1
             x2 = lineas_v[ic + 1][0]
             nombre = nombres_campos[ic - 1]
-            # -------------------------
+
             n_car, n_pal, stats, celda_bin = analizar_celda(img[y1:y2, x1:x2])
             ok = validar_campo(nombre, n_car, n_pal)
             resultados.append("OK" if ok else "MAL")
             print(f"> {nombre}: {'OK' if ok else 'MAL'}")                # (a) mostramos por terminal
         print(">")
-        filas_csv.append([ir] + resultados)
+
+        filas_csv.append([ir] + resultados)                              # ejemplo: [ir = 1, Legajo = OK,..., Condicion final = MAL] 
         condicion_final = celda_bin                                      # celda_bin = ultima celda del excel
+
         if all(r == "OK" for r in resultados):                           # (b) solo registros correctos
             cond = clasificar_condicion(condicion_final, stats)          # celda_bin/stats de la última columna
             if cond in ("L", "R"):
@@ -199,11 +252,12 @@ def procesar_planilla(nombre_archivo, input_dir, output_dir):
                 x2n = lineas_v[3][0]                                     
                 crop = cv2.cvtColor(img[y1:y2, x1n:x2n], cv2.COLOR_GRAY2RGB)
                 etiqueta = np.full((y2 - y1, 110, 3), 255, dtype=np.uint8)  # (alto, ancho, canales)
-                color = (255, 140, 0) if cond == "R" else (255, 0, 0)       # (255, 140, 0) = amarillo
+                color = (255, 140, 0) if cond == "R" else (255, 0, 0)       # (255, 140, 0) = naranja
                 texto = "RECUPERA" if cond == "R" else "LIBRE"
                 cv2.putText(etiqueta, texto, (5, (y2 - y1) - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1)  # (5, (y2 - y1) - 8) = abajo a la izquierda de la etiqueta
                 filas_salida.append(np.hstack([crop, etiqueta]))            # np.hstack: pone una matriz al lado de la otra (ayuda con IA)
-    nombre_base = os.path.splitext(nombre_archivo)[0]                                   
+    
+    nombre_base = os.path.splitext(nombre_archivo)[0]   # devuelve ("grade_sheet_...", ".png")                               
     with open(os.path.join(output_dir, f"{nombre_base}_validacion.csv"), "w", newline="", encoding="utf-8") as f:   # (c)
         writer = csv.writer(f)
         writer.writerow(["ID"] + nombres_campos)
