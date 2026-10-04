@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import csv
 import os
 
+# Rutas de entrada y salida de archivos
 if "__file__" in globals():
     base_dir = os.path.dirname(os.path.abspath(__file__))
 else:
@@ -17,24 +18,27 @@ def detectar_lineas(img_th, eje, factor=0.5):
     '''
     Recibe una imagen umbralada y devuelve una lista con el inicio y fin de cada línea.
     '''
-    suma = np.sum(img_th, eje)                  # eje=0 -> suma por columna | eje=1 -> suma por fila (como en ej2.py)
-    suma_th = suma > factor * suma.max()        # True donde hay línea (muchos más píxeles que en el resto)
+    suma = np.sum(img_th, eje)
+    suma_th = suma > factor * suma.max()
 
-    x = np.diff(suma_th)                        # Igual que en Letras: detecta los cambios F->T y T->F
+    x = np.diff(suma_th)
     lineas_idxs = np.argwhere(x)
-    ii = np.arange(0, len(lineas_idxs), 2)      # Corrijo los inicios (+1), como en Letras
+    ii = np.arange(0, len(lineas_idxs), 2)
     lineas_idxs[ii] += 1
 
-    return lineas_idxs.reshape((-1, 2))         # Cada fila: [inicio, fin] de una línea
+    return lineas_idxs.reshape((-1, 2))
+
+
+# Exploracion y deteccion de lineas en una planilla
 
 img = cv2.imread(os.path.join(input_dir, "grade_sheet_1.png"), cv2.IMREAD_GRAYSCALE)
-img_th = img < 150                              # Con < 5 las letras quedan cortadas
+img_th = img < 150                  
 plt.figure(), plt.imshow(img_th,cmap='gray'),plt.show(block=False)
 
 lineas_h = detectar_lineas(img_th, 1)           # 22 líneas horizontales
 lineas_v = detectar_lineas(img_th, 0)           # 8 líneas verticales
 
-lineas_h, lineas_v      # Ejecutar para entender el siguiente análisis.
+lineas_h, lineas_v
 
 # Analizando el diferencial que marca la línea detectada del excel en lineas_h y líneas_v
 # podemos deducir que, en este problema en particular, para toda línea del excel el rango de pixels
@@ -50,7 +54,7 @@ if __name__ == "__main__":
     for nombre_archivo in sorted(os.listdir(input_dir)):
         if nombre_archivo.startswith("grade_sheet_"):
             ruta_imagen = os.path.join(input_dir, nombre_archivo)
-            img = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE) # Cargamos imagen
+            img = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
             img_th = img < 150                              
             
             lineas_h = detectar_lineas(img_th, 1)
@@ -133,7 +137,8 @@ def analizar_celda(celda, th_area=2, th_espacio=7):
     return n_car, n_pal, np.array(caracteres), celda_bin
 
 # Distintos casos según th_area
-## Con th_area = 30, nos detecta la mayoría de letras.
+
+## Con th_area = 30, detecta la mayoría de letras.
 celda = registros[0]["campos"][0]["img"]
 n_car, n_pal, stats, celda_bin = analizar_celda(celda,th_area=30)
 celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
@@ -142,7 +147,7 @@ for st in stats:
 plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
 
 
-## Con th_area = 15, incluye caracter como "/".
+## Con th_area = 15, incluye caracteres como "/".
 celda = registros[0]["campos"][0]["img"]
 n_car, n_pal, stats, celda_bin = analizar_celda(celda,th_area=15)
 celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
@@ -161,7 +166,11 @@ plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} 
 
 def validar_campo(nombre, n_car, n_pal):
     '''
-    Recibe datos de una celda y devuelve si los campos son correctos.
+    Aplica las restricciones del enunciado a un campo:
+    - Legajo: 8 caracteres en 1 palabra.
+    - Nombre y apellido: al menos 2 palabras y hasta 12 caracteres.
+    - Parciales: 1 o 2 caracteres juntos.
+    - Condición Final: 1 caracter.
     '''
     if nombre == "Legajo":
         return n_car == 8 and n_pal == 1
@@ -193,7 +202,7 @@ def clasificar_condicion(celda_bin, stats):
     fondo = cv2.copyMakeBorder(1 - letra, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=1)   # borde para unir el fondo exterior (ayuda con IA)
     num_labels, labels, st, cen = cv2.connectedComponentsWithStats(fondo, connectivity=8, ltype=cv2.CV_32S)
     n_agujeros = num_labels - 2                                                       # resto etiqueta 0 y el fondo exterior
-    col_izq_llena = letra[:, 0].sum() == h                                            # resto etiqueta 0 y el fondo exterior
+    col_izq_llena = letra[:, 0].sum() == h                                            # true si la columna izquierda es todo 0
     if n_agujeros == 0 and col_izq_llena:
         return "L"      
     if n_agujeros == 1 and col_izq_llena:
@@ -214,6 +223,12 @@ for i in range(0,10):
 
 # Unificamos todas las funciones para analizar una tabla entera
 def procesar_planilla(nombre_archivo, input_dir, output_dir):
+    '''
+    Procesa una planilla completa:
+    - imprime OK/MAL por celda de cada registro,
+    - arma una imagen con los nombres de los alumnos con registro correcto y condición L o R, con una etiqueta LIBRE/RECUPERA,
+    - guarda un CSV con el resultado de cada validación en 'output'.
+    '''
     ruta_imagen = os.path.join(input_dir, nombre_archivo)
     img = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
     if img is None:
