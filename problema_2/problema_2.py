@@ -137,32 +137,47 @@ def analizar_celda(celda, th_area=2, th_espacio=7):
     return n_car, n_pal, np.array(caracteres), celda_bin
 
 # Distintos casos según th_area
+celda = registros[0]["campos"][0]["img"]
+celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
+
 
 ## Con th_area = 30, detecta la mayoría de letras.
-celda = registros[0]["campos"][0]["img"]
 n_car, n_pal, stats, celda_bin = analizar_celda(celda,th_area=30)
-celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
 for st in stats:
     cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
 plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
 
 
 ## Con th_area = 15, incluye caracteres como "/".
-celda = registros[0]["campos"][0]["img"]
 n_car, n_pal, stats, celda_bin = analizar_celda(celda,th_area=15)
-celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
 for st in stats:
     cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
 plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
 
 
 ## Optimo th_area = 2, incluye "-" y puede descartar algun pixel suelto que genere ruido en la imagen.
-celda = registros[0]["campos"][0]["img"]
 n_car, n_pal, stats, celda_bin = analizar_celda(celda)
-celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
 for st in stats:
     cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
 plt.figure(), plt.imshow(celda_color), plt.title(f"{n_car} caracteres - {n_pal} palabras"), plt.show(block=False)
+
+## Viendo todos juntos
+celda = registros[0]["campos"][0]["img"]
+celda_color = cv2.cvtColor(celda, cv2.COLOR_GRAY2RGB)
+
+plt.figure()
+plt.suptitle("Comparación con distintos umbrales")
+subplot = 311
+for th_area in [30,15,2]:
+    plt.subplot(subplot)
+    n_car, n_pal, stats, celda_bin = analizar_celda(celda,th_area=th_area)
+    for st in stats:
+        cv2.rectangle(celda_color, (st[0], st[1]), (st[0]+st[2], st[1]+st[3]), color=(0,255,0), thickness=1)
+    plt.imshow(celda_color)
+    plt.title(f"th_area: {th_area} ({n_car} caracteres - {n_pal} palabras)")
+    subplot += 1
+plt.tight_layout()
+plt.show(block=False)
 
 def validar_campo(nombre, n_car, n_pal):
     '''
