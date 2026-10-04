@@ -1,6 +1,6 @@
-# Trabajo Practica N1
+# Trabajo Práctico N1
 
-#### Version de Python y paquetes requeridos
+##### Version de Python y paquetes requeridos
 
 La versión de Python requerida será >3.15. Además, los paquetes que se necesitan para ejecutar los siguientes scripts se
 encuentran en el archivo *requirements.txt*.
@@ -12,7 +12,7 @@ encuentran en el archivo *requirements.txt*.
 ```
 > Output de comando `cat requirements.txt`
 
-Para instalarlos usando el archivo `requirements.txt`, se puede hacer el uso del siguiente comando
+Para instalarlos usando el archivo (*requirements.txt*)[https://github.com/gimenezvalentin/TP_PDI_1/blob/readme%2Brequirements/requirements.txt], se puede hacer el uso del siguiente comando
 `pip install -r requirements.txt`
 
 ## Uso y ejecución de programas
@@ -29,10 +29,12 @@ Usando el comando `tree problema_*.py` obtenemos algo como lo siguiente:
   problema_*.py
 ```
 
+Los enunciados se encuentran detallados en el archivo (*TUIA_PDI_TP1_2026_C2.pdf*)[https://github.com/gimenezvalentin/TP_PDI_1/blob/readme%2Brequirements/TUIA_PDI_TP1_2026_C2.pdf] dentro de la raíz del directorio.
+Para ejecutar el script con las resoluciones, se debe realizar el comando `python3 problema_*.py` desde la raíz de la carpeta del problema elegido.
+
 > Tener en cuenta que * se debe reemplazar con el número del ejercicio (1,2)
 
-
-###### Integrantes
+### Integrantes
 
 - Aguilera Joaquín
 - Arias Federico
