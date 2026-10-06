@@ -1,42 +1,62 @@
-# Trabajo Práctico N1
+# Trabajo Práctico N°1 - Procesamiento de Imágenes I
 
-##### Version de Python y paquetes requeridos
+Repositorio con las resoluciones del primer trabajo práctico de la materia Procesamiento de Imágenes I (IA 4.4) de la Tecnicatura Universitaria en Inteligencia Artificial (FCEIA - UNR).
 
-La versión de Python requerida será >3.15. Además, los paquetes que se necesitan para ejecutar los siguientes scripts se
-encuentran en el archivo *requirements.txt*.
+El trabajo se divide en dos problemas principales:
+*   **Problema 1 (Ecualización local de histograma):** Algoritmo de ecualización mediante ventana deslizante para revelar detalles ocultos en zonas de bajo contraste local.
+*   **Problema 2 (Validación de planillas):** Algoritmo de visión artificial que utiliza proyecciones, detección de contornos y componentes conectadas para aislar, validar y clasificar el contenido de planillas de calificaciones escaneadas.
 
-```
-  matplotlib==3.11.1
-  numpy==2.5.2
-  opencv-contrib-python==5.0.0.93  
-```
-> Output de comando `cat requirements.txt`
+## Requisitos e Instalación
 
-Para instalarlos usando el archivo [*requirements.txt*](https://github.com/gimenezvalentin/TP_PDI_1/blob/readme%2Brequirements/requirements.txt), se puede hacer el uso del siguiente comando
-`pip install -r requirements.txt`
+La versión de Python requerida es **>3.15**. Los paquetes necesarios para ejecutar los scripts se encuentran listados en el archivo `requirements.txt`:
 
-## Uso y ejecución de programas
-Ambas resoluciones están organizadas por medio de carpetas que a su vez tienen subcarpetas con los outputs e inputs respectivos. También se encuentran
-los scripts con los nombres de problema_1.py (problema\_2.py) para mostrar los resultados.
-Usando el comando `tree problema_*.py` obtenemos algo como lo siguiente:
+*   `matplotlib==3.11.1`
+*   `numpy==2.5.2`
+*   `opencv-contrib-python==5.0.0.93`
+
+Se recomienda crear un entorno virtual antes de instalar las dependencias:
 
 ```bash
+# Crear entorno virtual
+python -m venv venv
+
+# Activar entorno (Windows)
+.\venv\Scripts\activate
+# Activar entorno (Linux/Mac)
+source venv/bin/activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+Uso y ejecución de programas
+Las resoluciones están organizadas en carpetas separadas para cada problema, conteniendo sus propios scripts (problema_1.py y problema_2.py) junto con sus respectivas subcarpetas de entrada y salida (input/ y output/).
+
+Estructura general de los directorios:
+
+Bash
   problema_*/
-    input
+    input/
       ...
-    output
+    output/
       ...
   problema_*.py
-```
+Para ejecutar las resoluciones, ubicarse en la raíz del problema elegido y correr el script correspondiente:
 
-Los enunciados se encuentran detallados en el archivo [*TUIA_PDI_TP1_2026_C2.pdf*](https://github.com/gimenezvalentin/TP_PDI_1/blob/readme%2Brequirements/TUIA_PDI_TP1_2026_C2.pdf) dentro de la raíz del directorio.
-Para ejecutar el script con las resoluciones, se debe realizar el comando `python3 problema_*.py` desde la raíz de la carpeta del problema elegido.
+Bash
+# Para ejecutar el Problema 1
+python problema_1.py
 
-> Tener en cuenta que * se debe reemplazar con el número del ejercicio (1,2)
+# Para ejecutar el Problema 2
+python problema_2.py
+Nota: La ejecución del Problema 1 desplegará ventanas interactivas con las gráficas de Matplotlib. La ejecución del Problema 2 mostrará la validación por terminal y generará archivos automáticos (imágenes recortadas y un .csv) dentro de su carpeta output/.
 
-### Integrantes
+Los enunciados detallados se encuentran en el archivo TUIA_PDI_TP1_2026_C2.pdf dentro de la raíz del directorio.
 
-- Aguilera Joaquín
-- Arias Federico
-- Bousoño Guillermina
-- Gimenez Valentin
+Integrantes:
+
+Aguilera, Joaquín
+
+Arias, Federico
+
+Bousoño, Guillermina
+
+Gimenez, Valentin
