@@ -288,7 +288,7 @@ def procesar_planilla(nombre_archivo, input_dir, output_dir):
                 filas_salida.append(np.hstack([crop, etiqueta]))            # np.hstack: pone una matriz al lado de la otra (ayuda con IA)
     
     nombre_base = os.path.splitext(nombre_archivo)[0]   # devuelve ("grade_sheet_...", ".png")                               
-    with open(os.path.join(output_dir, f"{nombre_base}_validacion.csv"), "w", newline="", encoding="utf-8") as f:   # (c)
+    with open(os.path.join(output_dir, f"{nombre_base}_validacion.csv"), "w", newline="", encoding="utf-8-sig") as f:   # (c)
         writer = csv.writer(f)
         writer.writerow(["ID"] + nombres_campos)
         writer.writerows(filas_csv)
