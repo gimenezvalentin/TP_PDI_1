@@ -55,12 +55,9 @@ python problema_2.py
 
 Los enunciados detallados se encuentran en el archivo TUIA_PDI_TP1_2026_C2.pdf dentro de la raíz del directorio.
 
-#### Integrantes:
+### Integrantes:
 
-Aguilera, Joaquín
-
-Arias, Federico
-
-Bousoño, Guillermina
-
-Gimenez, Valentin
+* Aguilera, Joaquín
+* Arias, Federico
+* Bousoño, Guillermina
+* Gimenez, Valentin
